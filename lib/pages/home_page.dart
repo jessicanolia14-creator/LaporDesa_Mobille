@@ -4,6 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/demo_account.dart';
 import 'home_detail_page.dart';
 import 'buat_laporan.dart';
+import 'riwayat_laporan.dart';
+import 'notifikasi_page.dart';
+import 'bantuan_page.dart';
+import 'akun.dart';
+import 'detail_lampu_jalan.dart';
+import 'detail_saluran_air.dart';
+import 'detail_bantuan_banjir.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,8 +29,6 @@ class _HomePageState extends State<HomePage> {
 
   static const Color cardGrey = Color(0xFFEDF0F3);
   static const Color cardBorder = Color(0xFFD1D6DD);
-
-  // Hijau lebih lembut untuk kartu yang dipilih.
   static const Color selectedCard = Color(0xFF62A68D);
 
   int _selectedIndex = 0;
@@ -45,7 +50,7 @@ class _HomePageState extends State<HomePage> {
           'Lampu jalan tidak menyala pada malam hari '
           'sehingga area menjadi gelap.',
       status: 'Ditangani',
-      image: 'assets/images/lampu_jalan.png',
+      image: 'assets/images/lampu_jalan_mati.png',
       fallbackIcon: Icons.lightbulb_outline,
     ),
     _ReportData(
@@ -54,7 +59,7 @@ class _HomePageState extends State<HomePage> {
           'Air tidak mengalir dan mulai menggenang '
           'di sekitar selokan.',
       status: 'Selesai',
-      image: 'assets/images/saluran_air.png',
+      image: 'assets/images/saluran_air_.png',
       fallbackIcon: Icons.water_drop_outlined,
     ),
     _ReportData(
@@ -88,84 +93,45 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _showInformation(String title, String message) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: _textStyle(
-                    size: 22,
-                    weight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  message,
-                  style: _textStyle(
-                    size: 14,
-                    color: muted,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: darkGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Tutup',
-                      style: _textStyle(
-                        size: 14,
-                        color: Colors.white,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAccount() {
-    _showInformation(
-      'Akun Warga',
-      'Nama: ${DemoAccount.name}\n'
-      'Nomor HP: ${DemoAccount.phone}\n'
-      'Alamat: ${DemoAccount.address}\n'
-      'Wilayah: ${DemoAccount.rt}',
-    );
-  }
-
-  Future<void> _showReport(int index) async {
-  _selectReport(index);
-
-  // Kartu pertama membuka halaman detail dari Figma.
-  if (index == 0) {
-    final selectedTab = await Navigator.of(context).push<int>(
+  Future<void> _showAccount() async {
+    final int? selectedTab = await Navigator.of(context).push<int>(
       MaterialPageRoute<int>(
-        builder: (_) => const ReportDetailPage(),
+        builder: (_) => const AkunPage(),
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      if (selectedTab != null) {
+        _selectedIndex = selectedTab;
+      }
+    });
+  }
+
+      Future<void> _showReport(int index) async {
+    _selectReport(index);
+
+    final int? selectedTab = await Navigator.of(context).push<int>(
+      MaterialPageRoute<int>(
+        builder: (_) {
+          switch (index) {
+            case 0:
+              return const ReportDetailPage();
+
+            case 1:
+              return const DetailLampuJalanPage();
+
+            case 2:
+              return const DetailSaluranAirPage();
+
+            case 3:
+              return const DetailBantuanBanjirPage();
+
+            default:
+              return const ReportDetailPage();
+          }
+        },
       ),
     );
 
@@ -176,18 +142,7 @@ class _HomePageState extends State<HomePage> {
         _selectedIndex = selectedTab;
       });
     }
-
-    return;
   }
-
-  final report = _reports[index];
-
-  _showInformation(
-    report.title,
-    '${report.description}\n\n'
-    'Status: ${report.status}',
-  );
-}
 
   Widget _headerAction({
     required String label,
@@ -314,11 +269,17 @@ class _HomePageState extends State<HomePage> {
             icon: Icons.notifications_none_outlined,
             scale: scale,
             showDot: true,
-            onTap: () {
-              _showInformation(
-                'Notifikasi',
-                'Belum ada notifikasi baru.',
-              );
+            onTap: () async {
+              final int? selectedTab =
+                  await NotifikasiPage.open(context);
+
+              if (!mounted) return;
+
+              if (selectedTab != null) {
+                setState(() {
+                  _selectedIndex = selectedTab;
+                });
+              }
             },
           ),
         ],
@@ -335,12 +296,10 @@ class _HomePageState extends State<HomePage> {
         background = const Color(0xFFFFE5E7);
         foreground = const Color(0xFFE94853);
         break;
-
       case 'Selesai':
         background = const Color(0xFFA5D3C0);
         foreground = const Color(0xFF186D50);
         break;
-
       default:
         background = const Color(0xFFFFF0D4);
         foreground = const Color(0xFFD98200);
@@ -368,159 +327,139 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _reportCard(int index, double scale) {
-  final report = _reports[index];
-  final isSelected = _selectedReportIndex == index;
+    final report = _reports[index];
+    final isSelected = _selectedReportIndex == index;
 
-  final titleColor = isSelected
-      ? const Color(0xFF092F24)
-      : Colors.black;
+    final titleColor =
+        isSelected ? const Color(0xFF092F24) : Colors.black;
 
-  final descriptionColor = isSelected
-      ? const Color(0xFF123D30)
-      : muted;
+    final descriptionColor =
+        isSelected ? const Color(0xFF123D30) : muted;
 
-  final radius = BorderRadius.circular(15 * scale);
+    final radius = BorderRadius.circular(15 * scale);
 
-  return Padding(
-    padding: EdgeInsets.only(bottom: 12 * scale),
-    child: Semantics(
-      button: true,
-      selected: isSelected,
-      label: report.title,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: isSelected ? selectedCard : cardGrey,
-          borderRadius: radius,
-          border: Border.all(
-            color: isSelected ? selectedCard : cardBorder,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-  if (index == 0) {
-    _showReport(index);
-  } else {
-    _selectReport(index);
-  }
-},
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12 * scale),
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: report.title,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: isSelected ? selectedCard : cardGrey,
             borderRadius: radius,
-            child: Padding(
-              padding: EdgeInsets.all(10 * scale),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Foto persegi di sebelah kiri.
-                  Container(
-                    width: 74 * scale,
-                    height: 74 * scale,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6 * scale),
-                      border: Border.all(
-                        color: const Color(0xFFCDD4D9),
+            border: Border.all(
+              color: isSelected ? selectedCard : cardBorder,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: radius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+                            onTap: () {
+                _showReport(index);
+              },
+              borderRadius: radius,
+              child: Padding(
+                padding: EdgeInsets.all(10 * scale),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 74 * scale,
+                      height: 74 * scale,
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(6 * scale),
+                        border: Border.all(
+                          color: const Color(0xFFCDD4D9),
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        report.image,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: mint,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              report.fallbackIcon,
+                              size: 30 * scale,
+                              color: darkGreen,
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Image.asset(
-                      report.image,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: mint,
-                          alignment: Alignment.center,
-                          child: Icon(
-                            report.fallbackIcon,
-                            size: 30 * scale,
-                            color: darkGreen,
+                    SizedBox(width: 9 * scale),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            report.title,
+                            style: _textStyle(
+                              size: 15 * scale,
+                              color: titleColor,
+                              weight: FontWeight.w600,
+                              height: 1.2,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  SizedBox(width: 9 * scale),
-
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Judul memakai seluruh lebar bagian teks.
-                        Text(
-                          report.title,
-                          style: _textStyle(
-                            size: 15 * scale,
-                            color: titleColor,
-                            weight: FontWeight.w600,
-                            height: 1.2,
-                          ),
-                        ),
-
-                        SizedBox(height: 5 * scale),
-
-                        // Deskripsi, status, dan panah BERSEBELAHAN.
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                report.description,
-                                style: _textStyle(
-                                  size: 11.5 * scale,
-                                  color: descriptionColor,
-                                  height: 1.3,
+                          SizedBox(height: 5 * scale),
+                          Row(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  report.description,
+                                  style: _textStyle(
+                                    size: 11.5 * scale,
+                                    color: descriptionColor,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ),
-                            ),
-
-                            SizedBox(width: 6 * scale),
-
-                            // Status di kanan deskripsi.
-                            _statusBadge(
-                              report.status,
-                              scale,
-                            ),
-
-                            SizedBox(width: 2 * scale),
-
-                            // Panah sejajar dengan status.
-                            SizedBox(
-                              width: 23 * scale,
-                              child: IconButton(
-                                tooltip: 'Lihat detail laporan',
-                                onPressed: () => _showReport(index),
-                                padding: EdgeInsets.zero,
-                                constraints: BoxConstraints(
-                                  minWidth: 23 * scale,
-                                  minHeight: 48,
-                                ),
-                                icon: Icon(
-                                  Icons.chevron_right,
-                                  color: titleColor,
-                                  size: 25 * scale,
+                              SizedBox(width: 6 * scale),
+                              _statusBadge(report.status, scale),
+                              SizedBox(width: 2 * scale),
+                              SizedBox(
+                                width: 23 * scale,
+                                child: IconButton(
+                                  tooltip: 'Lihat detail laporan',
+                                  onPressed: () => _showReport(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: BoxConstraints(
+                                    minWidth: 23 * scale,
+                                    minHeight: 48,
+                                  ),
+                                  icon: Icon(
+                                    Icons.chevron_right,
+                                    color: titleColor,
+                                    size: 25 * scale,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildHome(double scale) {
     final name = DemoAccount.name.trim();
@@ -531,13 +470,11 @@ class _HomePageState extends State<HomePage> {
       padding: EdgeInsets.zero,
       children: [
         _buildHeader(scale),
-
         Image.asset(
           'assets/images/village.png',
           width: double.infinity,
           fit: BoxFit.contain,
         ),
-
         Padding(
           padding: EdgeInsets.fromLTRB(
             20 * scale,
@@ -556,9 +493,7 @@ class _HomePageState extends State<HomePage> {
                   height: 1.2,
                 ),
               ),
-
               SizedBox(height: 8 * scale),
-
               Text(
                 'Ada masalah di lingkunganmu?\n'
                 'Yuk, buat laporan sekarang!',
@@ -568,9 +503,7 @@ class _HomePageState extends State<HomePage> {
                   height: 1.35,
                 ),
               ),
-
               SizedBox(height: 20 * scale),
-
               Row(
                 children: [
                   Expanded(
@@ -596,8 +529,7 @@ class _HomePageState extends State<HomePage> {
                         vertical: 8 * scale,
                       ),
                       minimumSize: Size.zero,
-                      tapTargetSize:
-                          MaterialTapTargetSize.shrinkWrap,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
                       'Lihat Semua  ›',
@@ -609,9 +541,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-
               SizedBox(height: 14 * scale),
-
               ...List.generate(
                 _reports.length,
                 (index) => _reportCard(index, scale),
@@ -624,77 +554,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHistory(double scale) {
-    return ListView(
-      key: const PageStorageKey<String>('history-scroll'),
-      padding: EdgeInsets.all(20 * scale),
-      children: [
-        Text(
-          'Riwayat Laporan',
-          style: _textStyle(
-            size: 26 * scale,
-            weight: FontWeight.w700,
-          ),
-        ),
-        SizedBox(height: 8 * scale),
-        Text(
-          'Daftar laporan contoh.',
-          style: _textStyle(
-            size: 14 * scale,
-            color: muted,
-          ),
-        ),
-        SizedBox(height: 20 * scale),
-        ...List.generate(
-          _reports.length,
-          (index) => _reportCard(index, scale),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTemporaryPage({
-    required String title,
-    required IconData icon,
-    required String message,
-    required double scale,
-  }) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(32 * scale),
-      child: Column(
-        children: [
-          SizedBox(height: 60 * scale),
-          Icon(
-            icon,
-            size: 70 * scale,
-            color: darkGreen,
-          ),
-          SizedBox(height: 20 * scale),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: _textStyle(
-              size: 26 * scale,
-              weight: FontWeight.w700,
-            ),
-          ),
-          SizedBox(height: 12 * scale),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: _textStyle(
-              size: 14 * scale,
-              color: muted,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
+    return RiwayatLaporanPage(
+      showBottomNavigation: false,
+      onBack: () {
+        setState(() {
+          _selectedIndex = 0;
+        });
+      },
+      onNavigationChanged: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
     );
   }
 
   Widget _buildSelectedPage(double scale) {
     switch (_selectedIndex) {
-            case 1:
+      case 1:
         return CreateReportPage(
           showBottomNavigation: false,
           onBack: () {
@@ -713,13 +590,18 @@ class _HomePageState extends State<HomePage> {
         return _buildHistory(scale);
 
       case 3:
-        return _buildTemporaryPage(
-          title: 'Bantuan',
-          icon: Icons.headset_mic_outlined,
-          message:
-              'Halaman bantuan akan ditambahkan '
-              'sesuai desain berikutnya.',
-          scale: scale,
+        return BantuanPage(
+          showBottomNavigation: false,
+          onBack: () {
+            setState(() {
+              _selectedIndex = 0;
+            });
+          },
+          onNavigationChanged: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
         );
 
       default:
@@ -764,9 +646,7 @@ class _HomePageState extends State<HomePage> {
                   label,
                   style: _textStyle(
                     size: 13 * scale,
-                    color: isSelected
-                        ? darkGreen
-                        : Colors.black,
+                    color: isSelected ? darkGreen : Colors.black,
                     height: 1.2,
                   ),
                 ),
@@ -815,7 +695,7 @@ class _HomePageState extends State<HomePage> {
               index: 3,
               label: 'Bantuan',
               icon: Icons.headset_mic_outlined,
-              selectedIcon: Icons.headset_mic,
+              selectedIcon: Icons.headset_mic_outlined,
               scale: scale,
             ),
           ],

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,14 +12,12 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-  // Palet warna LaporDesa.
-  static const Color green = Color(0xFF08935B);
-  static const Color ink = Color(0xFF12192B);
-  static const Color subtitleColor = Color(0xFF64718A);
-  static const Color loadingBackground = Color(0xFFE1E7EF);
+  static const Color _green = Color(0xFF08935B);
+  static const Color _ink = Color(0xFF12192B);
+  static const Color _subtitleColor = Color(0xFF50617C);
+  static const Color _loadingBackground = Color(0xFFE1E7EF);
 
-  // Durasi splash dan loading.
-  static const Duration splashDuration = Duration(seconds: 20);
+  static const Duration _splashDuration = Duration(seconds: 15);
 
   Timer? _timer;
 
@@ -26,17 +25,13 @@ class _SplashPageState extends State<SplashPage> {
   void initState() {
     super.initState();
 
-    // Mulai menghitung setelah splash pertama kali tampil.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      _timer = Timer(splashDuration, () {
+      _timer = Timer(_splashDuration, () {
         if (!mounted) return;
 
-        Navigator.pushReplacementNamed(
-          context,
-          '/login',
-        );
+        Navigator.of(context).pushReplacementNamed('/login');
       });
     });
   }
@@ -47,64 +42,95 @@ class _SplashPageState extends State<SplashPage> {
     super.dispose();
   }
 
-  Widget _buildLogo() {
+  Widget _logo(double scale) {
     return Image.asset(
       'assets/images/logo.png',
-      width: 185,
-      height: 185,
+      width: 176 * scale,
+      height: 176 * scale,
       fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
       errorBuilder: (context, error, stackTrace) {
         return SizedBox(
-          width: 185,
-          height: 185,
-          child: CustomPaint(
-            painter: _SplashLogoPainter(),
+          width: 176 * scale,
+          height: 176 * scale,
+          child: Icon(
+            Icons.home_outlined,
+            size: 120 * scale,
+            color: _green,
           ),
         );
       },
     );
   }
 
-  Widget _buildBrandName() {
+  Widget _brandName(double scale) {
     return Text.rich(
       const TextSpan(
         children: [
           TextSpan(
             text: 'Lapor',
-            style: TextStyle(color: ink),
+            style: TextStyle(color: _ink),
           ),
           TextSpan(
             text: 'Desa',
-            style: TextStyle(color: green),
+            style: TextStyle(color: _green),
           ),
         ],
       ),
       textAlign: TextAlign.center,
       style: GoogleFonts.poppins(
-        fontSize: 36,
-        fontWeight: FontWeight.w800,
+        fontSize: 36 * scale,
+        fontWeight: FontWeight.w700,
         height: 1.15,
+        letterSpacing: -0.6 * scale,
       ),
     );
   }
 
-  Widget _buildLoading() {
+  Widget _subtitle(double scale) {
+    return Text(
+      'Bersama untuk lingkungan\n'
+      'yang lebih baik',
+      textAlign: TextAlign.center,
+      style: GoogleFonts.poppins(
+        fontSize: 14 * scale,
+        color: _subtitleColor,
+        fontWeight: FontWeight.w400,
+        height: 1.45,
+      ),
+    );
+  }
+
+  Widget _loading(double scale) {
     return SizedBox(
-      width: 150,
+      width: 142 * scale,
+      height: 11 * scale,
       child: TweenAnimationBuilder<double>(
         tween: Tween<double>(
           begin: 0,
           end: 1,
         ),
-        duration: splashDuration,
+        duration: _splashDuration,
+        curve: Curves.linear,
         builder: (context, value, child) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 10,
-              color: green,
-              backgroundColor: loadingBackground,
+          return Container(
+            decoration: BoxDecoration(
+              color: _loadingBackground,
+              borderRadius: BorderRadius.circular(3 * scale),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: value,
+                heightFactor: 1,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _green,
+                    borderRadius: BorderRadius.circular(3 * scale),
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -112,40 +138,57 @@ class _SplashPageState extends State<SplashPage> {
     );
   }
 
-  Widget _buildSlogan() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 26),
-        child: Text(
+  Widget _slogan(double scale) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
           'Lingkungan\n'
           'Lebih Baik,\n'
           'Dimulai dari Kita',
           textAlign: TextAlign.center,
           style: GoogleFonts.caveat(
-            fontSize: 22,
-            color: green,
+            fontSize: 18 * scale,
+            color: _green,
             fontWeight: FontWeight.w700,
             height: 1.05,
           ),
         ),
-      ),
+        SizedBox(height: 3 * scale),
+        SizedBox(
+          width: 40 * scale,
+          height: 5 * scale,
+          child: const CustomPaint(
+            painter: _SloganUnderlinePainter(),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildBottomIllustration() {
+  Widget _bottomIllustration(double width) {
     return Image.asset(
       'assets/images/splash_bottom.png',
-      width: double.infinity,
-      height: 220,
-      fit: BoxFit.contain,
+
+      // Lebar mengikuti layar.
+      // Tidak diberi tinggi tetap agar proporsi gambar terjaga.
+      width: width,
+      fit: BoxFit.fitWidth,
       alignment: Alignment.bottomCenter,
+      filterQuality: FilterQuality.high,
       errorBuilder: (context, error, stackTrace) {
         return SizedBox(
-          width: double.infinity,
-          height: 220,
-          child: CustomPaint(
-            painter: _SplashVillagePainter(),
+          width: width,
+          height: width * 0.6,
+          child: Center(
+            child: Text(
+              'Gambar splash_bottom.png belum ditemukan',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: _subtitleColor,
+              ),
+            ),
           ),
         );
       },
@@ -157,54 +200,56 @@ class _SplashPageState extends State<SplashPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        // Ilustrasi dapat mencapai bagian bawah layar.
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
+            final double width = constraints.maxWidth;
+            final double height = constraints.maxHeight;
+
+            // Proporsi berdasarkan screenshot Figma.
+            // Ukuran ikut menyesuaikan layar emulator.
+            final double scale = math.min(
+              width / 300,
+              height / 640,
+            );
+
+            return Stack(
+              children: [
+                // Ilustrasi melebar penuh dan menempel di bawah.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _bottomIllustration(width),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(
-                        top: constraints.maxHeight * 0.10,
-                        left: 20,
-                        right: 20,
-                      ),
-                      child: Column(
-                        children: [
-                          _buildLogo(),
-                          const SizedBox(height: 8),
-                          _buildBrandName(),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Bersama untuk lingkungan\n'
-                            'yang lebih baik',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: subtitleColor,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 36),
-                          _buildLoading(),
-                          const SizedBox(height: 32),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        _buildSlogan(),
-                        const SizedBox(height: 12),
-                        _buildBottomIllustration(),
-                      ],
-                    ),
-                  ],
+
+                // Logo, nama aplikasi, subtitle, dan loading.
+                Positioned(
+                  top: height * 0.11,
+                  left: 16 * scale,
+                  right: 16 * scale,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _logo(scale),
+                      SizedBox(height: 5 * scale),
+                      _brandName(scale),
+                      SizedBox(height: 3 * scale),
+                      _subtitle(scale),
+                      SizedBox(height: 36 * scale),
+                      _loading(scale),
+                    ],
+                  ),
                 ),
-              ),
+
+                // Slogan di kanan, di atas ilustrasi.
+                Positioned(
+                  right: 17 * scale,
+                  bottom: width * 0.60,
+                  child: _slogan(scale),
+                ),
+              ],
             );
           },
         ),
@@ -213,187 +258,33 @@ class _SplashPageState extends State<SplashPage> {
   }
 }
 
-// Logo cadangan jika logo.png belum tersedia.
-class _SplashLogoPainter extends CustomPainter {
+class _SloganUnderlinePainter extends CustomPainter {
+  const _SloganUnderlinePainter();
+
   @override
   void paint(Canvas canvas, Size size) {
-    const darkGreen = Color(0xFF075E49);
+    final Paint paint = Paint()
+      ..color = const Color(0xFF08935B)
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
 
-    canvas.save();
-    canvas.scale(
-      size.width / 180,
-      size.height / 180,
-    );
+    final Path path = Path()
+      ..moveTo(0, size.height * 0.75)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height * 0.15,
+        size.width,
+        size.height * 0.4,
+      );
 
-    final paint = Paint()..color = darkGreen;
-
-    // Matahari.
-    canvas.drawCircle(
-      const Offset(153, 26),
-      13,
-      Paint()..color = const Color(0xFFFFBD45),
-    );
-
-    // Badan rumah.
-    canvas.drawRect(
-      const Rect.fromLTWH(42, 75, 96, 71),
-      paint,
-    );
-
-    // Atap rumah.
-    canvas.drawPath(
-      Path()
-        ..moveTo(12, 82)
-        ..lineTo(90, 13)
-        ..lineTo(168, 82)
-        ..lineTo(156, 97)
-        ..lineTo(90, 40)
-        ..lineTo(24, 97)
-        ..close(),
-      paint,
-    );
-
-    // Jendela.
-    for (final x in [67.0, 92.0]) {
-      for (final y in [81.0, 106.0]) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(x, y, 20, 20),
-            const Radius.circular(1),
-          ),
-          Paint()..color = Colors.white,
-        );
-      }
-    }
-
-    // Daun kiri.
-    canvas.drawPath(
-      Path()
-        ..moveTo(91, 165)
-        ..quadraticBezierTo(19, 164, 14, 113)
-        ..quadraticBezierTo(78, 116, 91, 165)
-        ..close(),
-      paint,
-    );
-
-    // Daun kanan.
-    canvas.drawPath(
-      Path()
-        ..moveTo(81, 170)
-        ..quadraticBezierTo(100, 118, 169, 121)
-        ..quadraticBezierTo(161, 171, 81, 170)
-        ..close(),
-      Paint()..color = const Color(0xFF60B63E),
-    );
-
-    // Garis daun.
-    canvas.drawLine(
-      const Offset(81, 168),
-      const Offset(153, 136),
-      Paint()
-        ..color = darkGreen
-        ..strokeWidth = 2,
-    );
-
-    canvas.restore();
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
-}
-
-// Ilustrasi cadangan jika splash_bottom.png belum tersedia.
-class _SplashVillagePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    const green = Color(0xFF08935B);
-    const darkGreen = Color(0xFF075E49);
-
-    // Bukit.
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, size.height)
-        ..lineTo(0, size.height * 0.7)
-        ..quadraticBezierTo(
-          size.width * 0.3,
-          0,
-          size.width * 0.6,
-          size.height * 0.7,
-        )
-        ..quadraticBezierTo(
-          size.width * 0.8,
-          size.height * 0.2,
-          size.width,
-          size.height * 0.7,
-        )
-        ..lineTo(size.width, size.height)
-        ..close(),
-      Paint()..color = const Color(0xFF84D2B7),
-    );
-
-    // Rumput.
-    canvas.drawOval(
-      Rect.fromLTWH(
-        -30,
-        size.height * 0.7,
-        size.width + 60,
-        size.height * 0.7,
-      ),
-      Paint()..color = const Color(0xFF87CE23),
-    );
-
-    // Rumah.
-    for (final fraction in [0.15, 0.43, 0.73]) {
-      final x = size.width * fraction;
-      final y = size.height * 0.64;
-
-      canvas.drawRect(
-        Rect.fromLTWH(x, y, 40, 30),
-        Paint()..color = const Color(0xFFFFE6A3),
-      );
-
-      canvas.drawPath(
-        Path()
-          ..moveTo(x - 6, y)
-          ..lineTo(x + 20, y - 22)
-          ..lineTo(x + 46, y)
-          ..close(),
-        Paint()..color = darkGreen,
-      );
-
-      canvas.drawRect(
-        Rect.fromLTWH(x + 16, y + 12, 9, 18),
-        Paint()..color = green,
-      );
-    }
-
-    // Pohon.
-    for (final fraction in [0.04, 0.91]) {
-      final x = size.width * fraction;
-
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(x, size.height * 0.48),
-          width: 40,
-          height: size.height * 0.7,
-        ),
-        Paint()..color = green,
-      );
-
-      canvas.drawLine(
-        Offset(x, size.height * 0.4),
-        Offset(x, size.height),
-        Paint()
-          ..color = darkGreen
-          ..strokeWidth = 3,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+  bool shouldRepaint(
+    covariant _SloganUnderlinePainter oldDelegate,
+  ) {
     return false;
   }
 }
