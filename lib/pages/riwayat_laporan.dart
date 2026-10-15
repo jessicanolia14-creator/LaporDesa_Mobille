@@ -1,5 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../models/laporan_lokal.dart';
+import 'detail_riwayat_page.dart';
 
 class RiwayatLaporanPage extends StatefulWidget {
   const RiwayatLaporanPage({
@@ -29,52 +34,69 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
   static const Color _border = Color(0xFFD1D6DD);
 
   String _selectedFilter = 'Semua';
+  String? _selectedReportId;
 
-  // Mengikuti kartu pertama yang aktif pada Figma.
-  String? _selectedReportId = 'jalan';
+  @override
+  void initState() {
+    super.initState();
 
-  static const List<_HistoryReport> _reports = [
-    _HistoryReport(
-      id: 'jalan',
-      title: 'Jalan Rusak',
-      date: '08 September 2025',
-      status: 'Diproses',
-      image: 'assets/images/jalan_berlubang.png',
-      fallbackIcon: Icons.add_road,
-    ),
-    _HistoryReport(
-      id: 'lampu',
-      title: 'Lampu Jalan Mati',
-      date: '25 Juli 2025',
-      status: 'Selesai',
-      image: 'assets/images/lampu_jalan.png',
-      fallbackIcon: Icons.lightbulb_outline,
-    ),
-    _HistoryReport(
-      id: 'sampah',
-      title: 'Sampah Menumpuk',
-      date: '10 Juli 2025',
-      status: 'Diproses',
-      image: 'assets/images/sampah_menumpuk.png',
-      fallbackIcon: Icons.delete_outline,
-    ),
-    _HistoryReport(
-      id: 'saluran',
-      title: 'Saluran Air Tersumbat',
-      date: '30 Juni 2025',
-      status: 'Selesai',
-      image: 'assets/images/saluran_air.png',
-      fallbackIcon: Icons.water_drop_outlined,
-    ),
-    _HistoryReport(
-      id: 'bantuan',
-      title: 'Bantuan Warga',
-      date: '25 Juni 2025',
-      status: 'Diproses',
-      image: 'assets/images/bantuan_warga.png',
-      fallbackIcon: Icons.groups_outlined,
-    ),
-  ];
+    LaporanLokal.perubahan.addListener(_refreshReports);
+    _loadReports();
+  }
+
+  @override
+  void dispose() {
+    LaporanLokal.perubahan.removeListener(_refreshReports);
+    super.dispose();
+  }
+
+  void _refreshReports() {
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  Future<void> _loadReports() async {
+    try {
+      await LaporanLokal.muat();
+
+      if (!mounted) return;
+
+      setState(() {});
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Riwayat tersimpan belum bisa dibaca. '
+            'Silakan buka kembali halaman ini.',
+          ),
+        ),
+      );
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    const List<String> months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    final String day = date.day.toString().padLeft(2, '0');
+
+    return '$day ${months[date.month - 1]} ${date.year}';
+  }
 
   TextStyle _textStyle({
     required double size,
@@ -91,11 +113,34 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
   }
 
   List<_HistoryReport> get _visibleReports {
+    final List<LaporanLokal> savedReports =
+        List<LaporanLokal>.from(LaporanLokal.daftar);
+
+    savedReports.sort(
+      (LaporanLokal a, LaporanLokal b) {
+        return b.dibuatPada.compareTo(a.dibuatPada);
+      },
+    );
+
+    final List<_HistoryReport> allReports = [
+      for (final LaporanLokal report in savedReports)
+        _HistoryReport(
+          id: 'lokal-${report.dibuatPada.microsecondsSinceEpoch}',
+          title: report.judul,
+          date: _formatDate(report.dibuatPada),
+          status: 'Diproses',
+          image: '',
+          photoBytes: report.foto.isEmpty ? null : report.foto.first,
+          fallbackIcon: Icons.description_outlined,
+          laporan: report,
+        ),
+    ];
+
     if (_selectedFilter == 'Semua') {
-      return _reports;
+      return allReports;
     }
 
-    return _reports
+    return allReports
         .where((report) => report.status == _selectedFilter)
         .toList();
   }
@@ -106,10 +151,18 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
     });
   }
 
-  void _selectReport(String id) {
+  void _openReport(_HistoryReport report) {
     setState(() {
-      _selectedReportId = id;
+      _selectedReportId = report.id;
     });
+
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => DetailRiwayatPage(
+          laporan: report.laporan,
+        ),
+      ),
+    );
   }
 
   Widget _header(double scale) {
@@ -201,6 +254,39 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
   }
 
   Widget _photo(_HistoryReport report, double scale) {
+    Widget fallback() {
+      return Center(
+        child: Icon(
+          report.fallbackIcon,
+          size: 28 * scale,
+          color: _darkGreen,
+        ),
+      );
+    }
+
+    final Uint8List? bytes = report.photoBytes;
+    final Widget image;
+
+    if (bytes != null) {
+      image = Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) => fallback(),
+      );
+    } else if (report.image.isNotEmpty) {
+      image = Image.asset(
+        report.image,
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) => fallback(),
+      );
+    } else {
+      image = fallback();
+    }
+
     return Container(
       width: 52 * scale,
       height: 52 * scale,
@@ -212,21 +298,7 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
         ),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        report.image,
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
-        filterQuality: FilterQuality.high,
-        errorBuilder: (context, error, stackTrace) {
-          return Center(
-            child: Icon(
-              report.fallbackIcon,
-              size: 28 * scale,
-              color: _darkGreen,
-            ),
-          );
-        },
-      ),
+      child: image,
     );
   }
 
@@ -239,18 +311,14 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
         vertical: 3 * scale,
       ),
       decoration: BoxDecoration(
-        color: finished
-            ? _green
-            : const Color(0xFFFFF3E1),
+        color: finished ? _green : const Color(0xFFFFF3E1),
         borderRadius: BorderRadius.circular(3 * scale),
       ),
       child: Text(
         status,
         style: _textStyle(
           size: 13 * scale,
-          color: finished
-              ? Colors.white
-              : const Color(0xFFFF9800),
+          color: finished ? Colors.white : const Color(0xFFFF9800),
           weight: FontWeight.w500,
           height: 1.15,
         ),
@@ -260,8 +328,7 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
 
   Widget _reportCard(_HistoryReport report, double scale) {
     final bool selected = _selectedReportId == report.id;
-    final BorderRadius radius =
-        BorderRadius.circular(11 * scale);
+    final BorderRadius radius = BorderRadius.circular(11 * scale);
 
     return Semantics(
       button: true,
@@ -282,7 +349,7 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
           borderRadius: radius,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => _selectReport(report.id),
+            onTap: () => _openReport(report),
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: 9 * scale,
@@ -313,9 +380,7 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
                           report.date,
                           style: _textStyle(
                             size: 12 * scale,
-                            color: selected
-                                ? Colors.white
-                                : _muted,
+                            color: selected ? Colors.white : _muted,
                             height: 1.2,
                           ),
                         ),
@@ -500,6 +565,8 @@ class _HistoryReport {
     required this.status,
     required this.image,
     required this.fallbackIcon,
+    required this.laporan,
+    this.photoBytes,
   });
 
   final String id;
@@ -508,4 +575,6 @@ class _HistoryReport {
   final String status;
   final String image;
   final IconData fallbackIcon;
+  final LaporanLokal laporan;
+  final Uint8List? photoBytes;
 }

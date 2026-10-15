@@ -11,6 +11,7 @@ import 'akun.dart';
 import 'detail_lampu_jalan.dart';
 import 'detail_saluran_air.dart';
 import 'detail_bantuan_banjir.dart';
+import 'edit_profil_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -102,6 +103,7 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
+    // Membaca ulang nama dan foto setelah kembali dari halaman Akun.
     setState(() {
       if (selectedTab != null) {
         _selectedIndex = selectedTab;
@@ -109,7 +111,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-      Future<void> _showReport(int index) async {
+  Future<void> _showReport(int index) async {
     _selectReport(index);
 
     final int? selectedTab = await Navigator.of(context).push<int>(
@@ -150,7 +152,18 @@ class _HomePageState extends State<HomePage> {
     required VoidCallback onTap,
     required double scale,
     bool showDot = false,
+    bool showProfilePhoto = false,
   }) {
+    final photoBytes = EditProfilPage.photoBytes;
+
+    Widget defaultIcon() {
+      return Icon(
+        icon,
+        color: darkGreen,
+        size: 28 * scale,
+      );
+    }
+
     return Semantics(
       button: true,
       label: label,
@@ -175,11 +188,25 @@ class _HomePageState extends State<HomePage> {
                       color: mint,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      icon,
-                      color: darkGreen,
-                      size: 28 * scale,
-                    ),
+                    child: showProfilePhoto && photoBytes != null
+                        ? ClipOval(
+                            child: Image.memory(
+                              photoBytes,
+                              width: 38 * scale,
+                              height: 38 * scale,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                              filterQuality: FilterQuality.high,
+                              errorBuilder: (
+                                context,
+                                error,
+                                stackTrace,
+                              ) {
+                                return defaultIcon();
+                              },
+                            ),
+                          )
+                        : defaultIcon(),
                   ),
                   if (showDot)
                     Positioned(
@@ -226,6 +253,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icons.person,
             onTap: _showAccount,
             scale: scale,
+            showProfilePhoto: true,
           ),
           Expanded(
             child: Row(
@@ -296,10 +324,12 @@ class _HomePageState extends State<HomePage> {
         background = const Color(0xFFFFE5E7);
         foreground = const Color(0xFFE94853);
         break;
+
       case 'Selesai':
         background = const Color(0xFFA5D3C0);
         foreground = const Color(0xFF186D50);
         break;
+
       default:
         background = const Color(0xFFFFF0D4);
         foreground = const Color(0xFFD98200);
@@ -359,7 +389,7 @@ class _HomePageState extends State<HomePage> {
             borderRadius: radius,
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-                            onTap: () {
+              onTap: () {
                 _showReport(index);
               },
               borderRadius: radius,

@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/laporan_lokal.dart';
+
+export '../models/laporan_lokal.dart';
+
 class TentukanLokasiPage extends StatefulWidget {
   const TentukanLokasiPage({
     super.key,
@@ -63,7 +67,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
       _waitingForMaps = false;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
+        if (mounted && !_sending) {
           _editLocation();
         }
       });
@@ -85,13 +89,15 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
   }
 
   void _message(String text) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text)),
     );
   }
 
   Future<void> _openMaps() async {
-    if (_openingMaps) return;
+    if (_openingMaps || _sending) return;
 
     FocusScope.of(context).unfocus();
 
@@ -118,17 +124,11 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
 
       if (!opened) {
         _waitingForMaps = false;
-
-        if (mounted) {
-          _message('Google Maps belum bisa dibuka.');
-        }
+        _message('Google Maps belum bisa dibuka.');
       }
     } catch (_) {
       _waitingForMaps = false;
-
-      if (mounted) {
-        _message('Google Maps belum bisa dibuka. Coba lagi.');
-      }
+      _message('Google Maps belum bisa dibuka. Coba lagi.');
     } finally {
       if (mounted) {
         setState(() {
@@ -139,7 +139,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
   }
 
   Future<void> _editLocation() async {
-    if (_editingLocation || !mounted) return;
+    if (_editingLocation || _sending || !mounted) return;
 
     _editingLocation = true;
 
@@ -218,7 +218,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
 
                   if (value.isEmpty) return;
 
-                  Navigator.of(dialogContext).pop(value);
+                  Navigator.of(dialogContext).pop<String>(value);
                 },
                 child: Text(
                   'Gunakan Lokasi',
@@ -240,16 +240,18 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
         _lokasi = result;
       });
     } finally {
-      // Tunggu animasi penutupan dialog sebelum controller dibuang.
       await Future<void>.delayed(
         const Duration(milliseconds: 300),
       );
+
       controller.dispose();
       _editingLocation = false;
     }
   }
 
   Future<void> _chooseRt() async {
+    if (_sending) return;
+
     FocusScope.of(context).unfocus();
 
     final String? result = await showDialog<String>(
@@ -280,7 +282,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
                   child: InkWell(
                     borderRadius: BorderRadius.circular(5),
                     onTap: () {
-                      Navigator.of(dialogContext).pop(rt);
+                      Navigator.of(dialogContext).pop<String>(rt);
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -319,13 +321,16 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
 
     FocusScope.of(context).unfocus();
 
-    if (_lokasi == null || _lokasi!.trim().isEmpty) {
+    final String lokasi = (_lokasi ?? '').trim();
+    final String? rt = _selectedRt;
+
+    if (lokasi.isEmpty) {
       _message('Tentukan lokasi laporan terlebih dahulu.');
       await _editLocation();
       return;
     }
 
-    if (_selectedRt == null) {
+    if (rt == null) {
       _message('Pilih RT terlebih dahulu.');
       return;
     }
@@ -334,19 +339,30 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
       _sending = true;
     });
 
-    // Penyimpanan sementara di memori aplikasi.
-    // Belum mengirim ke server.
-    LaporanLokal.daftar.add(
-      LaporanLokal(
-        judul: widget.judul,
-        deskripsi: widget.deskripsi,
-        foto: List<Uint8List>.unmodifiable(widget.foto),
-        lokasi: _lokasi!,
-        rt: _selectedRt!,
-        patokan: _patokanController.text.trim(),
-        dibuatPada: DateTime.now(),
-      ),
-    );
+    try {
+      await LaporanLokal.tambah(
+        LaporanLokal(
+          judul: widget.judul,
+          deskripsi: widget.deskripsi,
+          foto: List<Uint8List>.unmodifiable(widget.foto),
+          lokasi: lokasi,
+          rt: rt,
+          patokan: _patokanController.text.trim(),
+          dibuatPada: DateTime.now(),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _sending = false;
+      });
+
+      _message('Laporan belum tersimpan. Silakan coba lagi.');
+      return;
+    }
+
+    if (!mounted) return;
 
     await showDialog<void>(
       context: context,
@@ -411,7 +427,9 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
               tooltip: 'Kembali',
               onPressed: _sending
                   ? null
-                  : () => Navigator.of(context).pop(),
+                  : () {
+                      Navigator.of(context).pop();
+                    },
               icon: Icon(
                 Icons.chevron_left_rounded,
                 size: 30 * scale,
@@ -493,6 +511,8 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
   }
 
   Widget _mapCard(double scale) {
+    final String? lokasi = _lokasi;
+
     return Container(
       height: 280 * scale,
       decoration: BoxDecoration(
@@ -507,7 +527,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (_lokasi == null)
+          if (lokasi == null)
             const CustomPaint(
               painter: _EmptyMapPainter(),
             )
@@ -529,7 +549,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
                   ),
                   SizedBox(height: 10 * scale),
                   Text(
-                    _lokasi!,
+                    lokasi,
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -550,11 +570,11 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
                   : _openMaps,
               style: OutlinedButton.styleFrom(
                 backgroundColor:
-                    _lokasi == null ? Colors.white : _green,
+                    lokasi == null ? Colors.white : _green,
                 foregroundColor:
-                    _lokasi == null ? _muted : Colors.white,
+                    lokasi == null ? _muted : Colors.white,
                 side: BorderSide(
-                  color: _lokasi == null ? _muted : _green,
+                  color: lokasi == null ? _muted : _green,
                 ),
                 padding: EdgeInsets.symmetric(
                   horizontal: 10 * scale,
@@ -572,8 +592,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
                     : 'Buka Google Maps',
                 style: _textStyle(
                   size: 14 * scale,
-                  color:
-                      _lokasi == null ? _muted : Colors.white,
+                  color: lokasi == null ? _muted : Colors.white,
                 ),
               ),
             ),
@@ -736,8 +755,7 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
                     elevation: 0,
                     padding: EdgeInsets.zero,
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(5 * scale),
+                      borderRadius: BorderRadius.circular(5 * scale),
                     ),
                   ),
                   child: Text(
@@ -773,7 +791,9 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
         child: InkWell(
           onTap: () => _changeNavigation(index),
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8 * scale),
+            padding: EdgeInsets.symmetric(
+              vertical: 8 * scale,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -806,7 +826,9 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: _border)),
+        border: Border(
+          top: BorderSide(color: _border),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -871,8 +893,6 @@ class _TentukanLokasiPageState extends State<TentukanLokasiPage>
   }
 }
 
-// Tampilan awal kotak lokasi mengikuti gambar ketiga.
-// Ini placeholder, bukan peta Google Maps interaktif.
 class _EmptyMapPainter extends CustomPainter {
   const _EmptyMapPainter();
 
@@ -900,28 +920,4 @@ class _EmptyMapPainter extends CustomPainter {
   bool shouldRepaint(covariant _EmptyMapPainter oldDelegate) {
     return false;
   }
-}
-
-// Data sementara untuk frontend.
-// Data akan hilang saat aplikasi dimulai ulang.
-class LaporanLokal {
-  LaporanLokal({
-    required this.judul,
-    required this.deskripsi,
-    required this.foto,
-    required this.lokasi,
-    required this.rt,
-    required this.patokan,
-    required this.dibuatPada,
-  });
-
-  static final List<LaporanLokal> daftar = [];
-
-  final String judul;
-  final String deskripsi;
-  final List<Uint8List> foto;
-  final String lokasi;
-  final String rt;
-  final String patokan;
-  final DateTime dibuatPada;
 }
