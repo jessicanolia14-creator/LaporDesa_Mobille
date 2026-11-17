@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'pages/splash_page.dart';
-import 'pages/login_page.dart';
-import 'pages/register_page.dart';
-import 'pages/forgot_password_page.dart';
-import 'pages/home_page.dart';
+import 'package:lapordesa/features/auth/views/splash_page.dart';
+import 'package:lapordesa/features/auth/views/login_page.dart';
+import 'package:lapordesa/features/auth/views/register_page.dart';
+import 'package:lapordesa/features/auth/views/forgot_password_page.dart';
+import 'package:lapordesa/features/home/views/home_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

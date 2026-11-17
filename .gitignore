@@ -46,3 +46,21 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+# Backup pengerjaan MVVM LaporDesa
+backup_*/
+.backup_*/
+*_backup/
+*.bak
+# File lokal dan hasil build
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+.gradle/
+**/.gradle/
+**/build/
+android/local.properties
+*.jks
+*.keystore
+.env
+.env.*
