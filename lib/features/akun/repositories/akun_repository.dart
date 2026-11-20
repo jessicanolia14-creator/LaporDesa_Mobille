@@ -6,6 +6,7 @@ import 'package:lapordesa/features/akun/models/akun_model.dart';
 /// Penyimpanan sementara. Data mengikuti DemoAccount, belum persisten.
 class AkunRepository {
   AkunRepository._();
+
   static final AkunRepository instance = AkunRepository._();
 
   Uint8List? photoBytes;
@@ -18,7 +19,9 @@ class AkunRepository {
     photoBytes: photoBytes,
   );
 
-  void updateAddress(String address) => DemoAccount.address = address;
+  void updateAddress(String address) {
+    DemoAccount.address = address;
+  }
 
   void saveProfile({
     required String name,
@@ -34,7 +37,17 @@ class AkunRepository {
     this.photoBytes = photoBytes;
   }
 
-  bool matchesPassword(String password) => DemoAccount.password == password;
+  bool matchesPassword(String password) {
+    return DemoAccount.password == password;
+  }
 
-  void changePassword(String password) => DemoAccount.password = password;
+  void changePassword(String password) {
+    DemoAccount.password = password;
+  }
+
+  // Hapus data akun dan foto profil.
+  void deleteAccount() {
+    DemoAccount.deleteAccount();
+    photoBytes = null;
+  }
 }

@@ -4,11 +4,24 @@ import '../models/chat_message.dart';
 
 class ChatBubble extends StatelessWidget {
   const ChatBubble({super.key, required this.message});
+
   final ChatMessage message;
+
+  // Menghapus kode referensi RAG seperti [D10], [D26], dan [D34].
+  String _cleanAiAnswer(String text) {
+    return text
+        .replaceAll(RegExp(r'\s*\[D\d+\]', caseSensitive: false), '')
+        .trim();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == ChatRole.user;
+
+    // Hanya jawaban chatbot yang dibersihkan.
+    // Pertanyaan pengguna tetap ditampilkan seperti aslinya.
+    final displayedText = isUser ? message.text : _cleanAiAnswer(message.text);
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -20,7 +33,7 @@ class ChatBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
         ),
         child: Text(
-          message.text,
+          displayedText,
           style: TextStyle(
             color: isUser ? Colors.white : const Color(0xFF12192B),
             fontSize: 14,

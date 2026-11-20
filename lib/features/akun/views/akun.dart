@@ -97,6 +97,17 @@ class _AkunPageState extends State<AkunPage> {
     }
   }
 
+  void _openDeleteAccount() {
+    FocusScope.of(context).unfocus();
+
+    // Hapus data akun melalui ViewModel.
+    _akunViewModel.deleteAccount();
+
+    // Kembali ke halaman Login dan bersihkan
+    // seluruh riwayat navigasi sebelumnya.
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+  }
+
   Widget _menu({
     required String title,
     required String id,
@@ -262,6 +273,14 @@ class _AkunPageState extends State<AkunPage> {
                 id: 'password',
                 icon: Icons.lock,
                 onTap: _openPassword,
+                scale: scale,
+              ),
+              SizedBox(height: 38 * scale),
+              _menu(
+                title: 'Hapus Akun',
+                id: 'delete',
+                icon: Icons.delete_outline_rounded,
+                onTap: _openDeleteAccount,
                 scale: scale,
               ),
             ],

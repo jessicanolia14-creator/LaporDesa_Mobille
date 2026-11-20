@@ -8,6 +8,7 @@ class AkunViewModel extends ChangeNotifier {
     : _repository = repository ?? AkunRepository.instance;
 
   final AkunRepository _repository;
+
   AkunModel get profile => _repository.profile;
 
   void saveProfile({
@@ -33,6 +34,7 @@ class AkunViewModel extends ChangeNotifier {
         bytes[0] == 0xFF &&
         bytes[1] == 0xD8 &&
         bytes[2] == 0xFF;
+
     final isPng =
         bytes.length >= 8 &&
         bytes[0] == 0x89 &&
@@ -43,22 +45,34 @@ class AkunViewModel extends ChangeNotifier {
         bytes[5] == 0x0A &&
         bytes[6] == 0x1A &&
         bytes[7] == 0x0A;
+
     return isJpg || isPng;
   }
 
   bool isPhotoSizeValid(Uint8List bytes) => bytes.length <= 2 * 1024 * 1024;
+
   bool isCurrentPassword(String password) =>
       _repository.matchesPassword(password);
+
   bool hasEightCharacters(String password) => password.runes.length >= 8;
+
   bool hasUpperAndLowerCase(String password) =>
       RegExp(r'[A-Z]').hasMatch(password) &&
       RegExp(r'[a-z]').hasMatch(password);
+
   bool hasNumber(String password) => RegExp(r'[0-9]').hasMatch(password);
+
   bool hasSymbol(String password) =>
       RegExp(r'[^a-zA-Z0-9\s]').hasMatch(password);
 
   void changePassword(String password) {
     _repository.changePassword(password);
+    notifyListeners();
+  }
+
+  // Menghapus akun pengguna melalui Repository.
+  void deleteAccount() {
+    _repository.deleteAccount();
     notifyListeners();
   }
 }

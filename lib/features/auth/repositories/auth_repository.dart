@@ -21,4 +21,9 @@ class AuthRepository {
       rt: rt,
     );
   }
+
+  // Menghapus akun demo yang sedang tersimpan.
+  void deleteAccount() {
+    DemoAccount.deleteAccount();
+  }
 }
